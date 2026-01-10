@@ -975,8 +975,17 @@ export const useAppStore = create<AppState & AppActions>()(
         fallbackModels: state.fallbackModels,
         parameters: state.parameters,
         conversations: state.conversations,
-        templates: state.templates.filter((t) => t.isCustom), // Only save custom templates
+        customTemplates: state.templates.filter((t) => t.isCustom), // Only save custom templates
         sidebarOpen: state.sidebarOpen,
+      }),
+      merge: (persistedState: any, currentState) => ({
+        ...currentState,
+        ...persistedState,
+        // Always use built-in templates + any persisted custom templates
+        templates: [
+          ...builtInTemplates,
+          ...(persistedState?.customTemplates || []),
+        ],
       }),
     }
   )
