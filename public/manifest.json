@@ -1,0 +1,21 @@
+{
+  "name": "PuterLLM - Zero-Config AI Platform",
+  "short_name": "PuterLLM",
+  "description": "Access 100+ AI models instantly with no API keys or sign-ups required.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#00ffff",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["productivity", "utilities", "developer tools"],
+  "prefer_related_applications": false
+}

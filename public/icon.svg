@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#8b5cf6"/>
+      <stop offset="100%" style="stop-color:#00ffff"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00ffff;stop-opacity:0.8"/>
+      <stop offset="100%" style="stop-color:#ff00ff;stop-opacity:0.8"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="#0a0a0f"/>
+  
+  <!-- Gradient border -->
+  <rect x="16" y="16" width="480" height="480" rx="80" fill="none" stroke="url(#bg-gradient)" stroke-width="4"/>
+  
+  <!-- Inner background -->
+  <rect x="32" y="32" width="448" height="448" rx="64" fill="#12121a"/>
+  
+  <!-- Sparkle icon (stylized) -->
+  <g transform="translate(128, 128) scale(1)">
+    <!-- Center star -->
+    <path d="M128 32 L140 100 L208 112 L140 124 L128 192 L116 124 L48 112 L116 100 Z" 
+          fill="url(#glow)" opacity="0.9"/>
+    
+    <!-- Top right sparkle -->
+    <path d="M200 64 L206 88 L230 94 L206 100 L200 124 L194 100 L170 94 L194 88 Z" 
+          fill="#00ffff" opacity="0.7"/>
+    
+    <!-- Bottom left sparkle -->
+    <path d="M56 160 L62 184 L86 190 L62 196 L56 220 L50 196 L26 190 L50 184 Z" 
+          fill="#ff00ff" opacity="0.7"/>
+    
+    <!-- Glow effects -->
+    <circle cx="128" cy="112" r="40" fill="url(#glow)" opacity="0.3" filter="blur(20px)"/>
+  </g>
+  
+  <!-- "P" letter stylized -->
+  <text x="256" y="340" font-family="system-ui, sans-serif" font-size="180" font-weight="bold" 
+        fill="url(#bg-gradient)" text-anchor="middle">P</text>
+</svg>
