@@ -143,6 +143,8 @@ export function ModelSelector() {
   const [scrollLeftStart, setScrollLeftStart] = useState(0);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
+  const isUserSelection = useRef(false);
+  const hasInitiallyScrolled = useRef(false);
 
   // Filter and sort models
   const filteredModels = useMemo(() => {
@@ -270,8 +272,19 @@ export function ModelSelector() {
     setIsDragging(false);
   }, []);
 
-  // Auto-scroll to selected model
+  // Auto-scroll to selected model only on initial mount
   useEffect(() => {
+    // Skip if user just clicked a model (they know where it is)
+    if (isUserSelection.current) {
+      isUserSelection.current = false;
+      return;
+    }
+    
+    // Only auto-scroll on initial mount, not on subsequent selections
+    if (hasInitiallyScrolled.current) {
+      return;
+    }
+    
     if (selectedModel && scrollContainerRef.current) {
       const index = filteredModels.findIndex((m) => m.id === selectedModel);
       if (index >= 0) {
@@ -282,6 +295,7 @@ export function ModelSelector() {
           left: targetScroll,
           behavior: "smooth",
         });
+        hasInitiallyScrolled.current = true;
       }
     }
   }, [selectedModel, filteredModels]);
@@ -448,7 +462,12 @@ export function ModelSelector() {
               key={model.id}
               model={model}
               isSelected={model.id === selectedModel}
-              onClick={() => !isDragging && selectModel(model.id)}
+              onClick={() => {
+                if (!isDragging) {
+                  isUserSelection.current = true;
+                  selectModel(model.id);
+                }
+              }}
             />
           ))}
         </div>
