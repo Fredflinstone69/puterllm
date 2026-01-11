@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft,
@@ -76,7 +76,7 @@ function ModelCard({ model, isSelected, onClick }: ModelCardProps) {
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
       className={cn(
-        "relative flex flex-col p-4 rounded-xl border transition-all duration-200 text-left min-w-[200px] h-[140px]",
+        "relative flex flex-col p-4 rounded-xl border transition-all duration-200 text-left min-w-[200px] h-[140px] flex-shrink-0",
         isSelected
           ? "bg-[var(--neon-cyan)]/10 border-[var(--neon-cyan)] shadow-[0_0_20px_rgba(0,255,255,0.2)]"
           : "bg-[var(--glass-bg)] border-[var(--glass-border)] hover:border-[var(--neon-purple)]/50"
@@ -137,8 +137,12 @@ export function ModelSelector() {
   } = useAppStore();
 
   const [showFilters, setShowFilters] = useState(false);
-  const [carouselIndex, setCarouselIndex] = useState(0);
-  const carouselRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeftStart, setScrollLeftStart] = useState(0);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
 
   // Filter and sort models
   const filteredModels = useMemo(() => {
@@ -199,27 +203,88 @@ export function ModelSelector() {
     return Array.from(providerSet) as string[];
   }, [models]);
 
-  // Carousel navigation
-  const visibleCount = 4;
-  const maxIndex = Math.max(0, filteredModels.length - visibleCount);
+  // Check scroll state
+  const updateScrollState = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    
+    setCanScrollLeft(container.scrollLeft > 0);
+    setCanScrollRight(
+      container.scrollLeft < container.scrollWidth - container.clientWidth - 1
+    );
+  }, []);
 
-  const scrollCarousel = (direction: "left" | "right") => {
-    setCarouselIndex((prev) => {
-      if (direction === "left") return Math.max(0, prev - 1);
-      return Math.min(maxIndex, prev + 1);
+  // Update scroll state on scroll
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    container.addEventListener("scroll", updateScrollState);
+    updateScrollState();
+
+    return () => container.removeEventListener("scroll", updateScrollState);
+  }, [updateScrollState, filteredModels]);
+
+  // Scroll navigation
+  const scroll = useCallback((direction: "left" | "right") => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const scrollAmount = 424; // ~2 cards worth
+    const targetScroll = direction === "left" 
+      ? container.scrollLeft - scrollAmount 
+      : container.scrollLeft + scrollAmount;
+    
+    container.scrollTo({
+      left: targetScroll,
+      behavior: "smooth",
     });
-  };
+  }, []);
+
+  // Mouse drag scrolling
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    
+    setIsDragging(true);
+    setStartX(e.pageX - container.offsetLeft);
+    setScrollLeftStart(container.scrollLeft);
+  }, []);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isDragging) return;
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    e.preventDefault();
+    const x = e.pageX - container.offsetLeft;
+    const walk = (x - startX) * 1.5; // Scroll speed multiplier
+    container.scrollLeft = scrollLeftStart - walk;
+  }, [isDragging, startX, scrollLeftStart]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    setIsDragging(false);
+  }, []);
 
   // Auto-scroll to selected model
   useEffect(() => {
-    if (selectedModel) {
+    if (selectedModel && scrollContainerRef.current) {
       const index = filteredModels.findIndex((m) => m.id === selectedModel);
       if (index >= 0) {
-        const newIndex = Math.min(maxIndex, Math.max(0, index - 1));
-        setCarouselIndex(newIndex);
+        const cardWidth = 212; // 200px + 12px gap
+        const container = scrollContainerRef.current;
+        const targetScroll = Math.max(0, index * cardWidth - container.clientWidth / 2 + cardWidth / 2);
+        container.scrollTo({
+          left: targetScroll,
+          behavior: "smooth",
+        });
       }
     }
-  }, [selectedModel, filteredModels, maxIndex]);
+  }, [selectedModel, filteredModels]);
 
   return (
     <div className="space-y-4">
@@ -316,64 +381,82 @@ export function ModelSelector() {
         )}
       </AnimatePresence>
 
-      {/* Model Carousel */}
-      <div className="relative">
-        {/* Navigation Buttons */}
-        <Button
-          variant="glass"
-          size="icon-sm"
-          onClick={() => scrollCarousel("left")}
-          disabled={carouselIndex === 0}
-          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10"
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </Button>
+      {/* Model Scroll Container */}
+      <div className="relative group">
+        {/* Left Navigation Button */}
+        <AnimatePresence>
+          {canScrollLeft && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute left-0 top-0 bottom-0 z-10 flex items-center"
+            >
+              <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-[var(--background)] to-transparent pointer-events-none" />
+              <Button
+                variant="glass"
+                size="icon-sm"
+                onClick={() => scroll("left")}
+                className="relative ml-1 shadow-lg"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        <Button
-          variant="glass"
-          size="icon-sm"
-          onClick={() => scrollCarousel("right")}
-          disabled={carouselIndex >= maxIndex}
-          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10"
-        >
-          <ChevronRight className="w-4 h-4" />
-        </Button>
+        {/* Right Navigation Button */}
+        <AnimatePresence>
+          {canScrollRight && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute right-0 top-0 bottom-0 z-10 flex items-center"
+            >
+              <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-[var(--background)] to-transparent pointer-events-none" />
+              <Button
+                variant="glass"
+                size="icon-sm"
+                onClick={() => scroll("right")}
+                className="relative mr-1 shadow-lg"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {/* Carousel Container */}
-        <div className="overflow-hidden px-2" ref={carouselRef}>
-          <motion.div
-            className="flex gap-3"
-            animate={{ x: -carouselIndex * 212 }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          >
-            {filteredModels.map((model) => (
-              <ModelCard
-                key={model.id}
-                model={model}
-                isSelected={model.id === selectedModel}
-                onClick={() => selectModel(model.id)}
-              />
-            ))}
-          </motion.div>
+        {/* Scrollable Container */}
+        <div
+          ref={scrollContainerRef}
+          className={cn(
+            "flex gap-3 overflow-x-auto pb-2 px-1 scrollbar-thin scrollbar-thumb-[var(--foreground-muted)]/30 scrollbar-track-transparent hover:scrollbar-thumb-[var(--foreground-muted)]/50",
+            isDragging ? "cursor-grabbing select-none" : "cursor-grab"
+          )}
+          style={{
+            scrollbarWidth: "thin",
+            scrollBehavior: isDragging ? "auto" : "smooth",
+          }}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseLeave}
+        >
+          {filteredModels.map((model) => (
+            <ModelCard
+              key={model.id}
+              model={model}
+              isSelected={model.id === selectedModel}
+              onClick={() => !isDragging && selectModel(model.id)}
+            />
+          ))}
         </div>
 
-        {/* Carousel Dots */}
-        {filteredModels.length > visibleCount && (
-          <div className="flex justify-center gap-1.5 mt-4">
-            {Array.from({ length: Math.ceil(filteredModels.length / visibleCount) }).map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setCarouselIndex(Math.min(maxIndex, i * visibleCount))}
-                className={cn(
-                  "w-2 h-2 rounded-full transition-all duration-200",
-                  Math.floor(carouselIndex / visibleCount) === i
-                    ? "bg-[var(--neon-cyan)] w-6"
-                    : "bg-[var(--foreground-muted)]/30"
-                )}
-              />
-            ))}
-          </div>
-        )}
+        {/* Scroll hint text */}
+        <div className="text-center text-xs text-[var(--foreground-muted)]/60 mt-2">
+          Scroll or drag to browse models
+        </div>
       </div>
 
       {/* Model Count */}

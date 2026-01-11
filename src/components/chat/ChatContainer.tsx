@@ -108,6 +108,7 @@ export function ChatContainer() {
       // Build the prompt
       const prompt = buildPrompt(content);
       console.log("Sending prompt:", prompt.substring(0, 200) + "...");
+      console.log("Image URL provided:", imageUrl ? "yes" : "no");
 
       // Try models with fallback
       const modelsToTry = [selectedModel, ...fallbackModels.filter(m => m !== selectedModel)];
@@ -128,6 +129,7 @@ export function ChatContainer() {
                 model,
                 temperature: parameters.temperature,
                 max_tokens: parameters.maxTokens,
+                imageUrl, // Pass image URL for vision models
               },
               (chunk) => {
                 fullContentRef.current += chunk;
@@ -158,6 +160,7 @@ export function ChatContainer() {
               model,
               temperature: parameters.temperature,
               max_tokens: parameters.maxTokens,
+              imageUrl, // Pass image URL for vision models
             });
 
             if (response) {

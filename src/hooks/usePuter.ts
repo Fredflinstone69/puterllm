@@ -10,6 +10,7 @@ interface ChatOptions {
   temperature?: number;
   max_tokens?: number;
   stream?: boolean;
+  imageUrl?: string; // Base64 data URL or HTTP URL for vision models
 }
 
 interface UsePuterReturn {
@@ -171,14 +172,21 @@ export function usePuter(): UsePuterReturn {
       }
 
       const model = options?.model || "gpt-4o-mini";
-      console.log(`Chat request - Model: ${model}, Prompt length: ${prompt.length}`);
+      const imageUrl = options?.imageUrl;
+      console.log(`Chat request - Model: ${model}, Prompt length: ${prompt.length}, Has image: ${!!imageUrl}`);
 
       try {
-        // Use the simplest API format: puter.ai.chat(prompt, options)
-        const response = await puter.ai.chat(prompt, { 
-          model,
-          stream: false 
-        });
+        // If there's an image, use the vision-capable API format: puter.ai.chat(prompt, image, options)
+        // Otherwise use the simple format: puter.ai.chat(prompt, options)
+        const response = imageUrl 
+          ? await puter.ai.chat(prompt, imageUrl, { 
+              model,
+              stream: false 
+            })
+          : await puter.ai.chat(prompt, { 
+              model,
+              stream: false 
+            });
         
         console.log("Chat response type:", typeof response);
         
@@ -233,13 +241,21 @@ export function usePuter(): UsePuterReturn {
       }
 
       const model = options?.model || "gpt-4o-mini";
-      console.log(`Stream request - Model: ${model}`);
+      const imageUrl = options?.imageUrl;
+      console.log(`Stream request - Model: ${model}, Has image: ${!!imageUrl}`);
 
       try {
-        const response = await puter.ai.chat(prompt, { 
-          model, 
-          stream: true 
-        });
+        // If there's an image, use the vision-capable API format: puter.ai.chat(prompt, image, options)
+        // Otherwise use the simple format: puter.ai.chat(prompt, options)
+        const response = imageUrl
+          ? await puter.ai.chat(prompt, imageUrl, { 
+              model, 
+              stream: true 
+            })
+          : await puter.ai.chat(prompt, { 
+              model, 
+              stream: true 
+            });
         
         console.log("Stream response type:", typeof response, response);
 
