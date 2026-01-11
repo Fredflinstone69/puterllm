@@ -445,11 +445,10 @@ export function ModelSelector() {
         <div
           ref={scrollContainerRef}
           className={cn(
-            "flex gap-3 overflow-x-auto pb-2 px-1 scrollbar-thin scrollbar-thumb-[var(--foreground-muted)]/30 scrollbar-track-transparent hover:scrollbar-thumb-[var(--foreground-muted)]/50",
+            "flex gap-3 overflow-x-auto pb-4 px-1 model-selector-scroll",
             isDragging ? "cursor-grabbing select-none" : "cursor-grab"
           )}
           style={{
-            scrollbarWidth: "thin",
             scrollBehavior: isDragging ? "auto" : "smooth",
           }}
           onMouseDown={handleMouseDown}

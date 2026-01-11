@@ -77,6 +77,31 @@
   background: var(--neon-cyan);
 }
 
+/* Model selector scrollbar - extra large for easy clicking */
+.model-selector-scroll {
+  scrollbar-width: auto;
+  scrollbar-color: var(--neon-purple) var(--background-secondary);
+}
+
+.model-selector-scroll::-webkit-scrollbar {
+  height: 20px;
+}
+
+.model-selector-scroll::-webkit-scrollbar-track {
+  background: var(--background-secondary);
+  border-radius: 10px;
+}
+
+.model-selector-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(90deg, var(--neon-purple), var(--neon-cyan));
+  border-radius: 10px;
+  border: 3px solid var(--background-secondary);
+}
+
+.model-selector-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(90deg, var(--neon-cyan), var(--neon-purple));
+}
+
 html {
   scroll-behavior: smooth;
 }

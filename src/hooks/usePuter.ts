@@ -138,12 +138,38 @@ export function usePuter(): UsePuterReturn {
       throw new Error("Puter.js not ready");
     }
 
+    // Reliable models that work consistently (direct vendor, not OpenRouter)
+    const reliableModelPrefixes = [
+      // OpenAI direct
+      'openai:', 'gpt-4o', 'gpt-5', 'gpt-4.1', 'o1', 'o3', 'o4',
+      // Anthropic direct
+      'anthropic:', 'claude',
+      // Google direct
+      'google:', 'gemini',
+      // DeepSeek direct
+      'deepseek:',
+      // Mistral direct
+      'mistralai:',
+      // xAI direct
+      'x-ai:', 'grok',
+      // TogetherAI (reliable)
+      'togetherai:',
+    ];
+
+    // Models to exclude (often unreliable or deprecated)
+    const excludePatterns = [
+      'openrouter:', // OpenRouter models can be flaky
+      ':free', // Free tier models often rate limited
+      'preview', // Preview models may be unstable
+      'beta', // Beta models may be unstable
+    ];
+
     try {
       const modelList = await puter.ai.listModels();
       console.log("Raw models response:", modelList);
       
       // Transform to our format
-      const transformed = Array.isArray(modelList) ? modelList.map((m: any) => ({
+      let transformed = Array.isArray(modelList) ? modelList.map((m: any) => ({
         id: m.id || m.name || String(m),
         name: m.name || m.id || String(m),
         provider: m.provider || m.vendor || "Unknown",
@@ -153,7 +179,23 @@ export function usePuter(): UsePuterReturn {
         supports_streaming: true,
       })) : [];
       
-      console.log("Transformed models:", transformed.length);
+      // Filter to only reliable models
+      transformed = transformed.filter((m: AIModel) => {
+        const id = m.id.toLowerCase();
+        
+        // Exclude unreliable patterns
+        if (excludePatterns.some(pattern => id.includes(pattern.toLowerCase()))) {
+          return false;
+        }
+        
+        // Include if matches reliable prefixes
+        return reliableModelPrefixes.some(prefix => 
+          id.toLowerCase().startsWith(prefix.toLowerCase()) ||
+          id.toLowerCase().includes(prefix.toLowerCase().replace(':', '/'))
+        );
+      });
+      
+      console.log("Filtered reliable models:", transformed.length);
       setModels(transformed);
       return transformed;
     } catch (err) {
