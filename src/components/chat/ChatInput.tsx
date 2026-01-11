@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/Badge";
 interface ChatInputProps {
   onSend: (message: string, image?: string) => void;
   onImageGenerate?: (prompt: string) => void;
+  onStop?: () => void;
   isGenerating: boolean;
   disabled?: boolean;
 }
@@ -29,6 +30,7 @@ interface ChatInputProps {
 export function ChatInput({
   onSend,
   onImageGenerate,
+  onStop,
   isGenerating,
   disabled,
 }: ChatInputProps) {
@@ -293,21 +295,30 @@ export function ChatInput({
           )}
         </div>
 
-        {/* Send button */}
-        <Tooltip content={isGenerating ? "Generating..." : "Send (Ctrl+Enter)"}>
-          <Button
-            variant="neon"
-            size="icon"
-            onClick={handleSend}
-            disabled={(!inputText.trim() && !pendingImage) || isGenerating}
-          >
-            {isGenerating ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
+        {/* Send / Stop button */}
+        {isGenerating ? (
+          <Tooltip content="Stop generating">
+            <Button
+              variant="destructive"
+              size="icon"
+              onClick={onStop}
+              className="bg-[var(--neon-red)] hover:bg-[var(--neon-red)]/80"
+            >
+              <Square className="w-5 h-5 fill-current" />
+            </Button>
+          </Tooltip>
+        ) : (
+          <Tooltip content="Send (Ctrl+Enter)">
+            <Button
+              variant="neon"
+              size="icon"
+              onClick={handleSend}
+              disabled={(!inputText.trim() && !pendingImage)}
+            >
               <Send className="w-5 h-5" />
-            )}
-          </Button>
-        </Tooltip>
+            </Button>
+          </Tooltip>
+        )}
       </div>
 
       {/* Status bar */}

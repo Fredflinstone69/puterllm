@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import type { AIModel } from "@/types/puter";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -30,6 +30,7 @@ interface UsePuterReturn {
     onChunk: (chunk: string) => void,
     onComplete?: () => void
   ) => Promise<void>;
+  stopGeneration: () => void;
   generateImage: (prompt: string, model?: string) => Promise<string>;
   textToSpeech: (text: string) => Promise<string>;
   saveToCloud: (key: string, data: unknown) => Promise<void>;
@@ -67,6 +68,8 @@ export function usePuter(): UsePuterReturn {
   const [models, setModels] = useState<AIModel[]>([]);
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const isAbortedRef = useRef(false);
 
   // Load Puter.js script
   useEffect(() => {
@@ -270,6 +273,16 @@ export function usePuter(): UsePuterReturn {
     [puter]
   );
 
+  // Stop generation
+  const stopGeneration = useCallback(() => {
+    console.log("Stopping generation...");
+    isAbortedRef.current = true;
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+  }, []);
+
   // Streaming chat
   const streamChat = useCallback(
     async (
@@ -281,6 +294,10 @@ export function usePuter(): UsePuterReturn {
       if (!puter) {
         throw new Error("Puter.js not ready");
       }
+
+      // Reset abort state and create new controller
+      isAbortedRef.current = false;
+      abortControllerRef.current = new AbortController();
 
       const model = options?.model || "gpt-4o-mini";
       const imageUrl = options?.imageUrl;
@@ -304,6 +321,12 @@ export function usePuter(): UsePuterReturn {
         // Check if it's an async iterable
         if (response && typeof response[Symbol.asyncIterator] === 'function') {
           for await (const part of response) {
+            // Check if aborted
+            if (isAbortedRef.current) {
+              console.log("Generation aborted by user");
+              onComplete?.();
+              return;
+            }
             const text = part?.text || part?.content || part?.delta?.content || 
                         (typeof part === 'string' ? part : '');
             if (text) {
@@ -312,20 +335,26 @@ export function usePuter(): UsePuterReturn {
           }
           onComplete?.();
         } else if (typeof response === 'string') {
-          onChunk(response);
+          if (!isAbortedRef.current) onChunk(response);
           onComplete?.();
         } else if (response?.toString && response.toString() !== '[object Object]') {
-          onChunk(response.toString());
+          if (!isAbortedRef.current) onChunk(response.toString());
           onComplete?.();
         } else {
           // Fallback - try to extract text
           const text = response?.message?.content || response?.text || response?.content || '';
-          if (text) {
+          if (text && !isAbortedRef.current) {
             onChunk(text);
           }
           onComplete?.();
         }
       } catch (err: any) {
+        // Don't throw if aborted
+        if (isAbortedRef.current) {
+          console.log("Request was aborted");
+          onComplete?.();
+          return;
+        }
         console.error("Stream error details:", err);
         console.error("Error keys:", err ? Object.keys(err) : "null");
         const message = getErrorMessage(err);
@@ -455,6 +484,7 @@ export function usePuter(): UsePuterReturn {
     loadModels,
     chat,
     streamChat,
+    stopGeneration,
     generateImage,
     textToSpeech,
     saveToCloud,

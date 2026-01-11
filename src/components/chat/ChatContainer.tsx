@@ -33,6 +33,7 @@ export function ChatContainer() {
     isReady,
     streamChat,
     chat,
+    stopGeneration,
     generateImage,
     textToSpeech,
     error: puterError,
@@ -281,6 +282,22 @@ export function ChatContainer() {
     [createBranch]
   );
 
+  // Handle stop generation
+  const handleStop = useCallback(() => {
+    stopGeneration();
+    setIsGenerating(false);
+    
+    // If there's partial content, save it as a message
+    if (fullContentRef.current) {
+      addMessage({
+        role: "assistant",
+        content: fullContentRef.current + "\n\n[Generation stopped by user]",
+        model: selectedModel || undefined,
+      });
+    }
+    clearStreamingContent();
+  }, [stopGeneration, setIsGenerating, addMessage, selectedModel, clearStreamingContent]);
+
   // Handle export
   const handleExport = () => {
     if (!currentConversation) return;
@@ -407,6 +424,7 @@ export function ChatContainer() {
         <ChatInput
           onSend={handleSend}
           onImageGenerate={handleImageGenerate}
+          onStop={handleStop}
           isGenerating={isGenerating}
           disabled={!isReady}
         />
