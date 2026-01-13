@@ -319,17 +319,18 @@ export function usePuter(): UsePuterReturn {
           setTimeout(() => reject(new Error("Request timed out after 30 seconds")), 30000);
         });
         
+        // Try with stream: false first - streaming seems to hang
         const chatPromise = imageUrl
           ? puter.ai.chat(prompt, imageUrl, { 
               model, 
-              stream: true 
+              stream: false 
             })
           : puter.ai.chat(prompt, { 
               model, 
-              stream: true 
+              stream: false 
             });
         
-        console.log(`[DEBUG] Waiting for API response...`);
+        console.log(`[DEBUG] Waiting for API response (non-streaming)...`);
         const response = await Promise.race([chatPromise, timeoutPromise]);
         
         console.log("Stream response type:", typeof response, response);
