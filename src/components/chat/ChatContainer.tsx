@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useEffect, useRef, useCallback, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageSquare, Trash2, Download, Sparkles } from "lucide-react";
 import { downloadAsFile } from "@/lib/utils";
@@ -43,6 +43,7 @@ export function ChatContainer() {
   const [error, setError] = useState<string | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const fullContentRef = useRef<string>("");
+  const generationStartTimeRef = useRef<number>(0);
 
   // Get current conversation
   const currentConversation = conversations.find(
@@ -98,6 +99,7 @@ export function ChatContainer() {
       setIsGenerating(true);
       clearStreamingContent();
       fullContentRef.current = "";
+      generationStartTimeRef.current = Date.now();
 
       // Add user message
       addMessage({
@@ -284,6 +286,14 @@ export function ChatContainer() {
 
   // Handle stop generation
   const handleStop = useCallback(() => {
+    // Prevent accidental stop within 500ms of starting generation
+    const timeSinceStart = Date.now() - generationStartTimeRef.current;
+    if (timeSinceStart < 500) {
+      console.log(`[DEBUG] Stop ignored - only ${timeSinceStart}ms since start`);
+      return;
+    }
+    
+    console.log(`[DEBUG] Stop confirmed - ${timeSinceStart}ms since start`);
     stopGeneration();
     setIsGenerating(false);
     

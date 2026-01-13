@@ -299,10 +299,12 @@ export function usePuter(): UsePuterReturn {
       }
 
       // Reset abort state and create new controller with unique request ID
+      console.log(`[DEBUG] Before reset - isAborted: ${isAbortedRef.current}, requestId: ${currentRequestIdRef.current}`);
       isAbortedRef.current = false;
       abortControllerRef.current = new AbortController();
       currentRequestIdRef.current += 1;
       const thisRequestId = currentRequestIdRef.current;
+      console.log(`[DEBUG] After reset - isAborted: ${isAbortedRef.current}, requestId: ${thisRequestId}`);
 
       const model = options?.model || "gpt-4o-mini";
       const imageUrl = options?.imageUrl;
@@ -325,7 +327,13 @@ export function usePuter(): UsePuterReturn {
 
         // Helper to check if this specific request should stop
         // A request should stop if aborted OR if a newer request has started (making this one stale)
-        const shouldStopRequest = () => isAbortedRef.current || currentRequestIdRef.current !== thisRequestId;
+        const shouldStopRequest = () => {
+          const should = isAbortedRef.current || currentRequestIdRef.current !== thisRequestId;
+          if (should) {
+            console.log(`[DEBUG] shouldStopRequest=true - isAborted: ${isAbortedRef.current}, currentId: ${currentRequestIdRef.current}, thisId: ${thisRequestId}`);
+          }
+          return should;
+        };
 
         // Check if it's an async iterable
         if (response && typeof response[Symbol.asyncIterator] === 'function') {

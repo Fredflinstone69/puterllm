@@ -299,9 +299,15 @@ export function ChatInput({
         {isGenerating ? (
           <Tooltip content="Stop generating">
             <Button
+              id="stop-button"
               variant="destructive"
               size="icon"
-              onClick={onStop}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log("[DEBUG] Stop button clicked");
+                onStop?.();
+              }}
               className="bg-[var(--neon-red)] hover:bg-[var(--neon-red)]/80"
             >
               <Square className="w-5 h-5 fill-current" />
@@ -310,9 +316,15 @@ export function ChatInput({
         ) : (
           <Tooltip content="Send (Ctrl+Enter)">
             <Button
+              id="send-button"
               variant="neon"
               size="icon"
-              onClick={handleSend}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log("[DEBUG] Send button clicked");
+                handleSend();
+              }}
               disabled={(!inputText.trim() && !pendingImage)}
             >
               <Send className="w-5 h-5" />
