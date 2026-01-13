@@ -70,6 +70,7 @@ export function usePuter(): UsePuterReturn {
   const [username, setUsername] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const isAbortedRef = useRef(false);
+  const currentRequestIdRef = useRef(0);
 
   // Load Puter.js script
   useEffect(() => {
@@ -277,6 +278,8 @@ export function usePuter(): UsePuterReturn {
   const stopGeneration = useCallback(() => {
     console.log("Stopping generation...");
     isAbortedRef.current = true;
+    // Increment request ID so any in-flight requests know they're stale
+    currentRequestIdRef.current += 1;
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
@@ -295,13 +298,15 @@ export function usePuter(): UsePuterReturn {
         throw new Error("Puter.js not ready");
       }
 
-      // Reset abort state and create new controller
+      // Reset abort state and create new controller with unique request ID
       isAbortedRef.current = false;
       abortControllerRef.current = new AbortController();
+      currentRequestIdRef.current += 1;
+      const thisRequestId = currentRequestIdRef.current;
 
       const model = options?.model || "gpt-4o-mini";
       const imageUrl = options?.imageUrl;
-      console.log(`Stream request - Model: ${model}, Has image: ${!!imageUrl}`);
+      console.log(`Stream request #${thisRequestId} - Model: ${model}, Has image: ${!!imageUrl}`);
 
       try {
         // If there's an image, use the vision-capable API format: puter.ai.chat(prompt, image, options)
@@ -318,12 +323,16 @@ export function usePuter(): UsePuterReturn {
         
         console.log("Stream response type:", typeof response, response);
 
+        // Helper to check if this specific request should stop
+        // A request should stop if aborted OR if a newer request has started (making this one stale)
+        const shouldStopRequest = () => isAbortedRef.current || currentRequestIdRef.current !== thisRequestId;
+
         // Check if it's an async iterable
         if (response && typeof response[Symbol.asyncIterator] === 'function') {
           for await (const part of response) {
-            // Check if aborted
-            if (isAbortedRef.current) {
-              console.log("Generation aborted by user");
+            // Check if aborted or if a new request has started
+            if (shouldStopRequest()) {
+              console.log(`Request #${thisRequestId} aborted or superseded`);
               onComplete?.();
               return;
             }
@@ -335,15 +344,15 @@ export function usePuter(): UsePuterReturn {
           }
           onComplete?.();
         } else if (typeof response === 'string') {
-          if (!isAbortedRef.current) onChunk(response);
+          if (!shouldStopRequest()) onChunk(response);
           onComplete?.();
         } else if (response?.toString && response.toString() !== '[object Object]') {
-          if (!isAbortedRef.current) onChunk(response.toString());
+          if (!shouldStopRequest()) onChunk(response.toString());
           onComplete?.();
         } else {
           // Fallback - try to extract text
           const text = response?.message?.content || response?.text || response?.content || '';
-          if (text && !isAbortedRef.current) {
+          if (text && !shouldStopRequest()) {
             onChunk(text);
           }
           onComplete?.();
@@ -351,7 +360,7 @@ export function usePuter(): UsePuterReturn {
       } catch (err: any) {
         // Don't throw if aborted
         if (isAbortedRef.current) {
-          console.log("Request was aborted");
+          console.log(`Request #${thisRequestId} was aborted`);
           onComplete?.();
           return;
         }
