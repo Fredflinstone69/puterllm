@@ -313,15 +313,24 @@ export function usePuter(): UsePuterReturn {
       try {
         // If there's an image, use the vision-capable API format: puter.ai.chat(prompt, image, options)
         // Otherwise use the simple format: puter.ai.chat(prompt, options)
-        const response = imageUrl
-          ? await puter.ai.chat(prompt, imageUrl, { 
+        
+        // Create a timeout promise (30 seconds)
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error("Request timed out after 30 seconds")), 30000);
+        });
+        
+        const chatPromise = imageUrl
+          ? puter.ai.chat(prompt, imageUrl, { 
               model, 
               stream: true 
             })
-          : await puter.ai.chat(prompt, { 
+          : puter.ai.chat(prompt, { 
               model, 
               stream: true 
             });
+        
+        console.log(`[DEBUG] Waiting for API response...`);
+        const response = await Promise.race([chatPromise, timeoutPromise]);
         
         console.log("Stream response type:", typeof response, response);
 
